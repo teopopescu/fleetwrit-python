@@ -12,7 +12,7 @@ import inspect
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, TypeVar, get_type_hints
 
-from .fingerprint import canonicalize, fingerprint
+from .fingerprint import canonicalize, fingerprint, redact_args
 
 Risk = Literal["low", "medium", "high", "critical"]
 
@@ -130,12 +130,16 @@ class Action:
     redact: list[str] = field(default_factory=list)
 
     def fingerprint(self, agent_id: str, environment: str) -> str:
-        """Return this action's fingerprint bound to an agent and environment."""
+        """Return this action's fingerprint bound to an agent and environment.
+
+        Redacted fields are hashed before fingerprinting so the executable
+        (plaintext) action still matches the fingerprint the server signed.
+        """
         return fingerprint(
             type=self.type,
             version=self.version,
             tool=self.tool,
-            args=self.args,
+            args=redact_args(self.args, self.redact),
             agent_id=agent_id,
             environment=environment,
         )

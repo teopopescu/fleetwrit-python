@@ -52,6 +52,21 @@ def fingerprint(
     return f"sha256:{digest}"
 
 
+def redact_args(args: dict[str, Any], redact: list[str]) -> dict[str, Any]:
+    """Replace each redacted field with ``sha256:<hex>`` of its canonical value.
+
+    The single source of truth for redaction, so the payload, the fingerprint,
+    and ``authorize()`` all agree on the redacted representation of an arg.
+    """
+    if not redact:
+        return args
+    out = dict(args)
+    for f in redact:
+        if f in out:
+            out[f] = "sha256:" + hashlib.sha256(canonicalize(out[f]).encode("utf-8")).hexdigest()
+    return out
+
+
 def idempotency_key(run_id: str, step_id: str, fingerprint: str) -> str:
     """Return sha256 over ``run_id|step_id|fingerprint`` (a retry re-attaches)."""
     raw = f"{run_id}|{step_id}|{fingerprint}"

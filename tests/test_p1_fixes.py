@@ -9,20 +9,37 @@ from fleetwrit import action, testing
 from fleetwrit.integrations.openai_agents import gated_tool
 
 
-def test_redaction_hashes_before_transmit() -> None:
+CARD = "4111111111111111"
+
+
+def test_redaction_hashes_before_transmit_and_summary() -> None:
     server = testing.FakeServer(testing.auto_approve())
     client = fleetwrit.Client(transport=server, agent_id="a", environment="test")
 
-    @action(type="pay.card", title="Pay", summary="pay {amount}", redact=["card"])
+    @action(type="pay.card", title="Pay", summary="pay {amount} with {card}", redact=["card"])
     def pay(amount: int, card: str) -> str:
         return "ok"
 
-    client.approve(pay.action(amount=100, card="4111111111111111"))
+    client.approve(pay.action(amount=100, card=CARD))
     sent = next(iter(server.requests.values()))
-    card = sent["action"]["args"]["card"]
-    assert card.startswith("sha256:")
-    assert "4111111111111111" not in card
+    assert sent["action"]["args"]["card"].startswith("sha256:")
+    assert CARD not in sent["action"]["args"]["card"]
     assert sent["action"]["args"]["amount"] == 100  # non-redacted field untouched
+    assert CARD not in sent["summary"]  # plaintext must not leak through the summary
+
+
+def test_redacted_action_executes_plaintext_and_authorizes() -> None:
+    client = testing.client(testing.auto_approve(), agent_id="a", environment="test")
+
+    @action(type="pay.card", title="Pay", summary="pay", redact=["card"])
+    def pay(amount: int, card: str) -> str:
+        return card
+
+    decision = client.approve(pay.action(amount=100, card=CARD))
+    # the reviewer approved a hash, but the tool must run on the real value
+    assert decision.action.args["card"] == CARD
+    with decision.authorize() as approved:  # re-redacts, matches the signed fingerprint
+        assert approved.args["card"] == CARD
 
 
 def test_openai_gated_tool_preserves_signature() -> None:
@@ -38,3 +55,5 @@ def test_openai_gated_tool_preserves_signature() -> None:
 
     params = inspect.signature(gated).parameters
     assert "service" in params and "version" in params
+    # function_tool calls positionally from the preserved signature
+    assert gated("payments-api", 42) == "payments-api@42"

@@ -8,6 +8,7 @@ SDK installed. Install with ``pip install "fleetwrit[openai-agents]"``.
 from __future__ import annotations
 
 import functools
+import inspect
 from typing import Any, Callable
 
 from ..actions import Action
@@ -27,10 +28,15 @@ def gated_tool(client: Client, build_action: Callable[..., Action]) -> Callable[
         # tool's real parameter signature/annotations survive (function_tool
         # reads inspect.signature, which follows __wrapped__ set by functools.wraps).
         underlying = getattr(fn, "_fn", fn)
+        sig = inspect.signature(underlying)
 
         @functools.wraps(underlying)
-        def wrapper(**kwargs: Any) -> Any:
-            decision = client.approve(build_action(**kwargs))
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            # function_tool calls positionally from the preserved signature;
+            # bind to recover the named args build_action expects.
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            decision = client.approve(build_action(**bound.arguments))
             if not decision.approved:
                 return f"Rejected by reviewer: {decision.reason or 'no reason given'}"
             with decision.authorize():

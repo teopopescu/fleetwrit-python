@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 import re
 import uuid
@@ -12,19 +11,19 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 from .actions import Action, ActionDefinition
 from .decision import Decision, Reviewer
-from .fingerprint import canonicalize, fingerprint, idempotency_key
+from .fingerprint import fingerprint, idempotency_key, redact_args
 from .transport import HttpTransport, Transport
 
 
-def _apply_redaction(args: dict[str, Any], redact: list[str]) -> dict[str, Any]:
-    """Hash redacted fields before they leave the process (never send plaintext)."""
-    if not redact:
-        return args
-    out = dict(args)
-    for f in redact:
-        if f in out:
-            out[f] = "sha256:" + hashlib.sha256(canonicalize(out[f]).encode("utf-8")).hexdigest()
-    return out
+def _render_summary(action: Action, args: dict[str, Any]) -> str | None:
+    """Fill the summary template with ``args`` (already redacted for transmit)."""
+    if action.summary is None:
+        return None
+    try:
+        return action.summary.format(**args)
+    except (KeyError, IndexError):
+        return action.summary
+
 
 if TYPE_CHECKING:
     from .policy import Guard, Policy
@@ -236,7 +235,7 @@ class Client:
         self._step += 1
         run = run_id or self.run_id
         step_id = f"step_{self._step}"
-        args = _apply_redaction(action.args, getattr(action, "redact", []))
+        args = redact_args(action.args, getattr(action, "redact", []))
         fp = fingerprint(
             type=action.type, version=action.version, tool=action.tool,
             args=args, agent_id=self.agent_id, environment=self.environment,
@@ -256,7 +255,7 @@ class Client:
                 "reversible": action.reversible,
             },
             "fingerprint": fp,
-            "summary": summary or action.rendered_summary() or action.title or action.type,
+            "summary": summary or _render_summary(action, args) or action.title or action.type,
             "context": context or {},
             "queue": queue or action.queue,
             "provenance": {
@@ -301,9 +300,16 @@ class Client:
     ) -> Action:
         if not data:
             return fallback
+        # The server returns redacted fields as hashes; restore the local
+        # plaintext so the tool executes the real value. authorize() re-redacts
+        # before fingerprinting, so this still matches the signed fingerprint.
+        args = dict(data.get("args", fallback.args))
+        for key in fallback.redact:
+            if key in fallback.args:
+                args[key] = fallback.args[key]
         return Action(
             type=data.get("type", fallback.type),
-            args=data.get("args", fallback.args),
+            args=args,
             version=data.get("version", fallback.version),
             tool=data.get("tool", fallback.tool),
             reversible=data.get("reversible", fallback.reversible),
@@ -313,4 +319,5 @@ class Client:
             queue=fallback.queue,
             editable=list(fallback.editable),
             display=dict(fallback.display),
+            redact=list(fallback.redact),
         )

@@ -1,5 +1,7 @@
 # Fleetwrit Python SDK
 
+[![test](https://github.com/teopopescu/fleetwrit-python/actions/workflows/test.yml/badge.svg)](https://github.com/teopopescu/fleetwrit-python/actions/workflows/test.yml)
+
 **The independent authorisation record for consequential AI-agent actions.**
 
 An agent stops before a consequential action, a named human decides, and the

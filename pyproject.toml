@@ -31,7 +31,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://fleetwrit.dev"
-Repository = "https://github.com/fleetwrit/fleetwrit-python"
+Repository = "https://github.com/teopopescu/fleetwrit-python"
+Issues = "https://github.com/teopopescu/fleetwrit-python/issues"
 
 [project.optional-dependencies]
 langchain = ["langgraph>=0.2"]

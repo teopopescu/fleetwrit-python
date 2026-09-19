@@ -7,13 +7,23 @@ agent resumes on exactly that decision with a signed receipt — a record that i
 tamper-evident and lives outside the system being governed.
 
 This is `fleetwrit-python`, the SDK. The server and dashboard live in the
-separate [`fleetwrit`](https://github.com/fleetwrit/fleetwrit) repository. This
-is a **v0 scaffold**: the SDK surface, the fingerprint, action definitions, the
-policy hook, the testing helpers and the CLI are implemented and tested offline.
-The live server transport, real policy engines and framework integrations are
-stubbed and marked "coming in a later gate".
+separate [`fleetwrit`](https://github.com/teopopescu/fleetwrit) repository. This
+is an **alpha**: the SDK surface, the fingerprint, action definitions, the policy
+hook, the testing helpers and the CLI are implemented and tested, the live HTTP
+transport works against the Fleetwrit server, and the **LangGraph** and **OpenAI
+Agents** integrations are real and covered by tests. The LlamaIndex/AgentCore
+adapters and the OPA/Cedar policy engines are still stubs marked "coming in a
+later gate".
 
 ## Install
+
+Until the first PyPI release, install from GitHub:
+
+```bash
+pip install "git+https://github.com/teopopescu/fleetwrit-python.git"
+```
+
+Once published, this becomes:
 
 ```bash
 pip install fleetwrit
@@ -143,6 +153,21 @@ pytest
 
 `nox` runs the suite across Python 3.10–3.13, the examples, and the
 no-framework import check.
+
+## Releasing to PyPI
+
+Publishing is automated by `.github/workflows/publish.yml`, which runs on a
+published GitHub Release and uploads via **PyPI Trusted Publishing** (OIDC — no
+API token is stored in the repo). One-time setup on PyPI:
+
+1. Register (or reserve) the `fleetwrit` project on PyPI.
+2. Add a Trusted Publisher: owner `teopopescu`, repo `fleetwrit-python`,
+   workflow `publish.yml`, environment `pypi`.
+3. Cut a GitHub Release tagged `v<version>` (matching `pyproject.toml`). The
+   workflow builds the sdist + wheel and publishes them.
+
+To publish with an API token instead, add a `PYPI_API_TOKEN` secret and pass it
+as `password:` to the publish step.
 
 ## Licence
 

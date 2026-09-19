@@ -7,6 +7,7 @@ SDK installed. Install with ``pip install "fleetwrit[openai-agents]"``.
 
 from __future__ import annotations
 
+import functools
 from typing import Any, Callable
 
 from ..actions import Action
@@ -22,6 +23,12 @@ def gated_tool(client: Client, build_action: Callable[..., Action]) -> Callable[
     """
 
     def deco(fn: Callable[..., Any]) -> Callable[..., Any]:
+        # Unwrap an @action ActionDefinition to its underlying function so the
+        # tool's real parameter signature/annotations survive (function_tool
+        # reads inspect.signature, which follows __wrapped__ set by functools.wraps).
+        underlying = getattr(fn, "_fn", fn)
+
+        @functools.wraps(underlying)
         def wrapper(**kwargs: Any) -> Any:
             decision = client.approve(build_action(**kwargs))
             if not decision.approved:
@@ -29,8 +36,6 @@ def gated_tool(client: Client, build_action: Callable[..., Action]) -> Callable[
             with decision.authorize():
                 return fn(**decision.action.args)
 
-        wrapper.__name__ = getattr(fn, "__name__", "gated_tool")
-        wrapper.__doc__ = fn.__doc__
         return wrapper
 
     return deco

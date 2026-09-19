@@ -127,6 +127,7 @@ class Action:
     queue: str | None = None
     editable: list[str] = field(default_factory=list)
     display: dict[str, DisplayHint] = field(default_factory=dict)
+    redact: list[str] = field(default_factory=list)
 
     def fingerprint(self, agent_id: str, environment: str) -> str:
         """Return this action's fingerprint bound to an agent and environment."""
@@ -230,6 +231,7 @@ class ActionDefinition:
             queue=self.queue,
             editable=list(self.editable),
             display=dict(self.display),
+            redact=list(self.redact),
         )
 
     def definition(self) -> dict[str, Any]:

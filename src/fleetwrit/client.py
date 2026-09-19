@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import uuid
@@ -11,8 +12,19 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 from .actions import Action, ActionDefinition
 from .decision import Decision, Reviewer
-from .fingerprint import idempotency_key
+from .fingerprint import canonicalize, fingerprint, idempotency_key
 from .transport import HttpTransport, Transport
+
+
+def _apply_redaction(args: dict[str, Any], redact: list[str]) -> dict[str, Any]:
+    """Hash redacted fields before they leave the process (never send plaintext)."""
+    if not redact:
+        return args
+    out = dict(args)
+    for f in redact:
+        if f in out:
+            out[f] = "sha256:" + hashlib.sha256(canonicalize(out[f]).encode("utf-8")).hexdigest()
+    return out
 
 if TYPE_CHECKING:
     from .policy import Guard, Policy
@@ -224,7 +236,11 @@ class Client:
         self._step += 1
         run = run_id or self.run_id
         step_id = f"step_{self._step}"
-        fp = action.fingerprint(self.agent_id, self.environment)
+        args = _apply_redaction(action.args, getattr(action, "redact", []))
+        fp = fingerprint(
+            type=action.type, version=action.version, tool=action.tool,
+            args=args, agent_id=self.agent_id, environment=self.environment,
+        )
         idem = idempotency_key_ or idempotency_key(run, step_id, fp)
         created = _now()
         ttl = parse_duration(expires_in) if expires_in is not None else 3600
@@ -236,7 +252,7 @@ class Client:
                 "type": action.type,
                 "version": action.version,
                 "tool": action.tool,
-                "args": action.args,
+                "args": args,
                 "reversible": action.reversible,
             },
             "fingerprint": fp,

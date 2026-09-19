@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import inspect
 
+import pytest
+
 import fleetwrit
 from fleetwrit import action, testing
+from fleetwrit.exceptions import FleetwritAlreadyConsumed
 from fleetwrit.integrations.openai_agents import gated_tool
 
 
@@ -57,3 +60,17 @@ def test_openai_gated_tool_preserves_signature() -> None:
     assert "service" in params and "version" in params
     # function_tool calls positionally from the preserved signature
     assert gated("payments-api", 42) == "payments-api@42"
+
+
+def test_second_consume_of_same_decision_is_rejected() -> None:
+    server = testing.FakeServer(testing.auto_approve())
+    client = fleetwrit.Client(transport=server, agent_id="a", environment="test")
+
+    @action(type="pay.once", title="Pay", summary="pay")
+    def pay(amount: int) -> str:
+        return "ok"
+
+    client.approve(pay.action(amount=1), idempotency_key_="same-key")
+    # a retry that reattaches to the already-consumed decision must fail closed
+    with pytest.raises(FleetwritAlreadyConsumed):
+        client.approve(pay.action(amount=1), idempotency_key_="same-key")

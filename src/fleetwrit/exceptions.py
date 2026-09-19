@@ -15,6 +15,14 @@ class PolicyDenied(FleetwritError):
     """A policy engine returned a ``deny`` verdict for the proposed action."""
 
 
+class FleetwritAlreadyConsumed(FleetwritError):
+    """The decision was already acknowledged; refusing to deliver it twice.
+
+    Enforces exactly-once: a retry with the same idempotency key that reaches an
+    already-consumed decision fails here rather than executing the action again.
+    """
+
+
 class FleetwritActionMismatch(FleetwritError):
     """The action about to run differs from the action a human approved.
 

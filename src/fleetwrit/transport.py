@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from typing import Any, Protocol, runtime_checkable
 
-from .exceptions import FleetwritUnavailable
+from .exceptions import FleetwritAlreadyConsumed, FleetwritUnavailable
 
 
 @runtime_checkable
@@ -96,7 +96,16 @@ class HttpTransport:
         return resp.json()
 
     def ack(self, request_id: str) -> None:
-        self._request("POST", f"/v1/requests/{request_id}/ack")
+        import httpx
+
+        try:
+            self._request("POST", f"/v1/requests/{request_id}/ack")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 409:
+                raise FleetwritAlreadyConsumed(
+                    f"decision for {request_id} was already consumed"
+                ) from exc
+            raise
 
     def cancel(self, request_id: str) -> None:
         self._request("POST", f"/v1/requests/{request_id}/cancel")

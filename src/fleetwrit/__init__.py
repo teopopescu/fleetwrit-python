@@ -16,6 +16,7 @@ from .client import Client
 from .decision import Decision, Reviewer
 from .exceptions import (
     FleetwritActionMismatch,
+    FleetwritAlreadyConsumed,
     FleetwritError,
     FleetwritUnavailable,
     PolicyDenied,
@@ -67,5 +68,6 @@ __all__ = [
     "FleetwritUnavailable",
     "PolicyDenied",
     "FleetwritActionMismatch",
+    "FleetwritAlreadyConsumed",
     "__version__",
 ]

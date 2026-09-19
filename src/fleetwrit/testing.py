@@ -13,6 +13,7 @@ import uuid
 from typing import Any, Callable
 
 from .client import Client
+from .exceptions import FleetwritAlreadyConsumed
 from .fingerprint import fingerprint
 
 Responder = Callable[[dict[str, Any]], dict[str, Any]]
@@ -110,7 +111,9 @@ class FakeServer:
 
     def ack(self, request_id: str) -> None:
         if request_id in self.acked:
-            raise AssertionError(f"decision for {request_id} already acknowledged")
+            raise FleetwritAlreadyConsumed(
+                f"decision for {request_id} was already consumed"
+            )
         self.acked.add(request_id)
 
     def cancel(self, request_id: str) -> None:

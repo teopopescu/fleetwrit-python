@@ -30,13 +30,27 @@ def gated_tool(client: Client, build_action: Callable[..., Action]) -> Callable[
         underlying = getattr(fn, "_fn", fn)
         sig = inspect.signature(underlying)
 
-        @functools.wraps(underlying)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def _named(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
             # function_tool calls positionally from the preserved signature;
             # bind to recover the named args build_action expects.
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
-            decision = client.approve(build_action(**bound.arguments))
+            return dict(bound.arguments)
+
+        if inspect.iscoroutinefunction(underlying):
+            @functools.wraps(underlying)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                decision = client.approve(build_action(**_named(args, kwargs)))
+                if not decision.approved:
+                    return f"Rejected by reviewer: {decision.reason or 'no reason given'}"
+                with decision.authorize():
+                    return await fn(**decision.action.args)
+
+            return async_wrapper
+
+        @functools.wraps(underlying)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            decision = client.approve(build_action(**_named(args, kwargs)))
             if not decision.approved:
                 return f"Rejected by reviewer: {decision.reason or 'no reason given'}"
             with decision.authorize():

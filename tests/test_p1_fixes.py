@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 
 import pytest
@@ -60,6 +61,22 @@ def test_openai_gated_tool_preserves_signature() -> None:
     assert "service" in params and "version" in params
     # function_tool calls positionally from the preserved signature
     assert gated("payments-api", 42) == "payments-api@42"
+
+
+def test_async_gated_tool_executes_and_awaits() -> None:
+    client = testing.client(testing.auto_approve(), agent_id="a", environment="test")
+
+    @action(type="deploy.rollback.async", title="Roll back", summary="rb")
+    async def roll_back(service: str, version: int) -> str:
+        return f"{service}@{version}"
+
+    gated = gated_tool(
+        client, build_action=lambda service, version: roll_back.action(service=service, version=version)
+    )(roll_back)
+
+    # OpenAI Agents classifies by coroutine-ness; async tools must stay awaitable
+    assert inspect.iscoroutinefunction(gated)
+    assert asyncio.run(gated("payments-api", 42)) == "payments-api@42"
 
 
 def test_second_consume_of_same_decision_is_rejected() -> None:

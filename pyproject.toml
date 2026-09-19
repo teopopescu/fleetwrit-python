@@ -56,6 +56,10 @@ fleetwrit = "fleetwrit.cli:main"
 [project.entry-points.pytest11]
 fleetwrit = "fleetwrit.testing"
 
+[tool.hatch.metadata]
+# the dev-server extra points at the server via a git URL
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/fleetwrit"]
 

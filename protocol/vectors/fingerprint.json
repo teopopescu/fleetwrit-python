@@ -1,0 +1,61 @@
+{
+  "$comment": "Conformance vectors for the Fleetwrit fingerprint. Generated from fleetwrit.fingerprint; regenerate with scripts, do not hand-edit. Canonical JSON is JCS-style (sorted keys, compact separators, UTF-8) over the fields listed in 'fingerprint_fields'; a v0 approximation of RFC 8785 for numbers.",
+  "algorithm": "sha256",
+  "fingerprint_fields": [
+    "type",
+    "version",
+    "tool",
+    "args",
+    "agent_id",
+    "environment"
+  ],
+  "idempotency_key": "sha256(run_id|step_id|fingerprint)",
+  "vectors": [
+    {
+      "name": "refund-issue-gbp",
+      "description": "Refund action, integer minor-unit amount; key order must not matter.",
+      "input": {
+        "type": "refund.issue",
+        "version": "a41f09c2",
+        "tool": "stripe.refunds.create",
+        "args": {
+          "charge": "ch_123",
+          "amount": 400000,
+          "currency": "gbp"
+        },
+        "agent_id": "support-refunds",
+        "environment": "prod"
+      },
+      "expected_canonical": "{\"agent_id\":\"support-refunds\",\"args\":{\"amount\":400000,\"charge\":\"ch_123\",\"currency\":\"gbp\"},\"environment\":\"prod\",\"tool\":\"stripe.refunds.create\",\"type\":\"refund.issue\",\"version\":\"a41f09c2\"}",
+      "expected_fingerprint": "sha256:badce59c34d04098da9b96ba6de1a4b545ce27d6859c456266a3efd105f468ce",
+      "idempotency_key_example": {
+        "run_id": "run_77",
+        "step_id": "step_1",
+        "expected": "e88ee9301615b9ceb4d3ae73b423206b57bb68e73bd6e83e5d88fc69184d5b82"
+      }
+    },
+    {
+      "name": "deploy-rollback-null-tool",
+      "description": "Undeclared action: version '0', null tool, nested/unicode args.",
+      "input": {
+        "type": "deploy.rollback",
+        "version": "0",
+        "tool": null,
+        "args": {
+          "service": "payments-api",
+          "version": 42,
+          "note": "café ☕"
+        },
+        "agent_id": "sre-remediation",
+        "environment": "staging"
+      },
+      "expected_canonical": "{\"agent_id\":\"sre-remediation\",\"args\":{\"note\":\"café ☕\",\"service\":\"payments-api\",\"version\":42},\"environment\":\"staging\",\"tool\":null,\"type\":\"deploy.rollback\",\"version\":\"0\"}",
+      "expected_fingerprint": "sha256:8127abb6751bc75618b5027910670ebd888a62491476a22b8c78471b53a14773",
+      "idempotency_key_example": {
+        "run_id": "run_77",
+        "step_id": "step_1",
+        "expected": "a5494824283c055209e8848a6f17358a96fe9e9ee0eca98146e65ccbdf69c199"
+      }
+    }
+  ]
+}

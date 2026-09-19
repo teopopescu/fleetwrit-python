@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fleetwrit"
-version = "0.1.0a3"
+version = "0.0.1"
 description = "The independent authorisation record for consequential AI-agent actions."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -43,7 +43,7 @@ opa = ["httpx>=0.24"]
 cedar = ["cedarpy>=3"]
 # Pulls the local server (with the dashboard bundled in), so `fleetwrit dev`
 # runs the whole stack from a single install — no repo checkout, no Node.
-dev-server = ["fleetwrit-server @ git+https://github.com/teopopescu/fleetwrit.git#subdirectory=server"]
+dev-server = ["fleetwrit-server>=0.0.1"]
 dev = [
     "pytest>=7",
     "hypothesis>=6",
@@ -55,10 +55,6 @@ fleetwrit = "fleetwrit.cli:main"
 
 [project.entry-points.pytest11]
 fleetwrit = "fleetwrit.testing"
-
-[tool.hatch.metadata]
-# the dev-server extra points at the server via a git URL
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fleetwrit"]

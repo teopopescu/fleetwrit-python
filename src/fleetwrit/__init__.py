@@ -26,7 +26,7 @@ from .exceptions import (
 if TYPE_CHECKING:
     from .policy import Guard, Policy
 
-__version__ = "0.1.0a3"
+__version__ = "0.0.1"
 
 _default_client: Client | None = None
 

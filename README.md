@@ -17,14 +17,6 @@ later gate".
 
 ## Install
 
-Until the first PyPI release, install from GitHub:
-
-```bash
-pip install "git+https://github.com/teopopescu/fleetwrit-python.git"
-```
-
-Once published, this becomes:
-
 ```bash
 pip install fleetwrit
 ```
@@ -44,7 +36,7 @@ so one install and one command bring up the whole thing — no repo checkout, no
 Docker, no Node:
 
 ```bash
-pip install "fleetwrit[dev-server] @ git+https://github.com/teopopescu/fleetwrit-python.git"
+pip install "fleetwrit[dev-server]"
 fleetwrit dev            # server API + dashboard on http://localhost:4100
 ```
 

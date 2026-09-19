@@ -1,7 +1,7 @@
 """The ``fleetwrit`` command-line entry point.
 
-v0 stubs that print sensible output and exit 0: ``dev``, ``actions lint``,
-``ledger verify`` and ``report``. Real behaviour lands with the server.
+``dev`` runs the local server + dashboard (delegates to the server package).
+``actions lint``, ``ledger verify`` and ``report`` remain v0 stubs.
 """
 
 from __future__ import annotations
@@ -14,12 +14,23 @@ from . import __version__
 
 
 def _cmd_dev(args: argparse.Namespace) -> int:
-    print(
-        f"fleetwrit dev would start the local server, SQLite and dashboard on "
-        f"http://localhost:{args.port} with auth off and seeded demo data."
-    )
-    print("(stub: the server lives in the `fleetwrit` repo and is not bundled here.)")
-    return 0
+    # The server + dashboard live in the `fleetwrit` repo. If the server package
+    # is installed alongside the SDK, delegate to it; otherwise point the way.
+    try:
+        from fleetwrit_server.cli import run_dev
+    except ImportError:
+        print("fleetwrit dev needs the server package (github.com/teopopescu/fleetwrit).")
+        print("From a clone of that repo:")
+        print("  pip install -e ./server -e ./fleetwrit-python")
+        print("  fleetwrit dev          # or: fleetwrit-server dev")
+        return 1
+    return int(run_dev(
+        port=args.port,
+        dashboard_port=args.dashboard_port,
+        dashboard=not args.no_dashboard,
+        seed=not args.no_seed,
+        path=args.path,
+    ))
 
 
 def _cmd_actions_lint(args: argparse.Namespace) -> int:
@@ -48,8 +59,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"fleetwrit {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    dev = sub.add_parser("dev", help="Start the local dev server (stub)")
+    dev = sub.add_parser("dev", help="Run the local server + dashboard")
     dev.add_argument("--port", type=int, default=4100)
+    dev.add_argument("--dashboard-port", type=int, default=5174)
+    dev.add_argument("--no-dashboard", action="store_true", help="Run the server only")
+    dev.add_argument("--no-seed", action="store_true", help="Skip seeding demo data")
+    dev.add_argument("--path", default=None, help="Repo root to find dashboard/ (default: cwd)")
     dev.set_defaults(func=_cmd_dev)
 
     actions = sub.add_parser("actions", help="Action catalog tools")

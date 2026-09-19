@@ -19,15 +19,16 @@ def _cmd_dev(args: argparse.Namespace) -> int:
     try:
         from fleetwrit_server.cli import run_dev
     except ImportError:
-        print("fleetwrit dev needs the local server. Install it (no clone, no Node):")
-        print('  pip install "fleetwrit[dev-server] @ git+https://github.com/teopopescu/fleetwrit-python.git"')
-        print("then re-run:  fleetwrit dev")
+        print("fleetwrit dev needs the server package (github.com/teopopescu/fleetwrit).")
+        print("From a clone of that repo:")
+        print("  pip install -e ./server -e ./fleetwrit-python")
+        print("  fleetwrit dev          # or: fleetwrit-server dev")
         return 1
     return int(run_dev(
         port=args.port,
         dashboard_port=args.dashboard_port,
         dashboard=not args.no_dashboard,
-        seed=not args.no_seed,
+        seed=args.demo,
         path=args.path,
     ))
 
@@ -62,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     dev.add_argument("--port", type=int, default=4100)
     dev.add_argument("--dashboard-port", type=int, default=5174)
     dev.add_argument("--no-dashboard", action="store_true", help="Run the server only")
-    dev.add_argument("--no-seed", action="store_true", help="Skip seeding demo data")
+    dev.add_argument("--demo", action="store_true", help="Load sample agents/requests (default: empty)")
     dev.add_argument("--path", default=None, help="Repo root to find dashboard/ (default: cwd)")
     dev.set_defaults(func=_cmd_dev)
 

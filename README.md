@@ -48,7 +48,10 @@ pip install "fleetwrit[dev-server] @ git+https://github.com/teopopescu/fleetwrit
 fleetwrit dev            # server API + dashboard on http://localhost:4100
 ```
 
-Flags: `--port`, `--no-dashboard`, `--no-seed`.
+It starts **empty** — set `FLEETWRIT_URL=http://localhost:4100` in your agent and
+develop against it. It auto-picks a free port if 4100 is taken.
+
+Flags: `--port`, `--no-dashboard`, `--demo` (load sample data), `--dashboard-port`.
 
 ## The three calls and a guard
 

@@ -12,9 +12,9 @@ This is `fleetwrit-python`, the SDK. The server and dashboard live in the
 separate [`fleetwrit`](https://github.com/teopopescu/fleetwrit) repository. This
 is an **alpha**: the SDK surface, the fingerprint, action definitions, the policy
 hook, the testing helpers and the CLI are implemented and tested, the live HTTP
-transport works against the Fleetwrit server, and the **LangGraph** and **OpenAI
-Agents** integrations are real and covered by tests. The LlamaIndex/AgentCore
-adapters and the OPA/Cedar policy engines are still stubs marked "coming in a
+transport works against the Fleetwrit server, and the **LangGraph**, **OpenAI
+Agents**, and **Bedrock AgentCore** integrations are real and covered by tests.
+The LlamaIndex adapter and the OPA/Cedar policy engines are still stubs marked "coming in a
 later gate".
 
 ## Install

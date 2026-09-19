@@ -77,11 +77,11 @@ def gateway_handler(
     build_action: Callable[..., Action],
     invoke: Callable[..., Any],
 ) -> Callable[..., dict[str, Any]]:
-    """Build an AgentCore Gateway Lambda handler that gates ``invoke``.
+    """Build an AgentCore Gateway Lambda handler that gates ``invoke`` (experimental).
 
-    Reads the tool args from the event, requires a decision, and only on approval
-    runs ``invoke(**approved_args)`` — returning the result and signed receipt.
-    A rejection returns a structured denial and the tool never runs.
+    On approval runs ``invoke(**approved_args)`` and returns the result + receipt;
+    a rejection returns a structured denial and the tool never runs. The Gateway
+    event shape is not yet validated on live AWS — prefer ``gate`` (see the docs).
     """
 
     def handler(event: dict[str, Any], context: Any = None) -> dict[str, Any]:

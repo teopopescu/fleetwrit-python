@@ -18,6 +18,7 @@ from .exceptions import (
     FleetwritActionMismatch,
     FleetwritAlreadyConsumed,
     FleetwritError,
+    FleetwritExpired,
     FleetwritUnavailable,
     PolicyDenied,
 )
@@ -69,5 +70,6 @@ __all__ = [
     "PolicyDenied",
     "FleetwritActionMismatch",
     "FleetwritAlreadyConsumed",
+    "FleetwritExpired",
     "__version__",
 ]

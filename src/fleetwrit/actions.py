@@ -50,6 +50,23 @@ class Table:
 
 DisplayHint = Money | Diff | Code | Link | Table
 
+
+def display_to_wire(display: dict[str, "DisplayHint"]) -> dict[str, dict[str, Any]]:
+    """Serialise display hints to the ``{"kind": ..., ...}`` shape the server stores."""
+    out: dict[str, dict[str, Any]] = {}
+    for key, hint in display.items():
+        if isinstance(hint, Money):
+            out[key] = {"kind": "money", "currency_field": hint.currency_field}
+        elif isinstance(hint, Code):
+            out[key] = {"kind": "code", "language": hint.language}
+        elif isinstance(hint, Diff):
+            out[key] = {"kind": "diff"}
+        elif isinstance(hint, Link):
+            out[key] = {"kind": "link"}
+        elif isinstance(hint, Table):
+            out[key] = {"kind": "table"}
+    return out
+
 # --- JSON Schema derivation ------------------------------------------------
 
 _JSON_TYPES: dict[type, str] = {
@@ -128,6 +145,8 @@ class Action:
     editable: list[str] = field(default_factory=list)
     display: dict[str, DisplayHint] = field(default_factory=dict)
     redact: list[str] = field(default_factory=list)
+    expires_in: str | int | None = None
+    on_expiry: str | None = None
 
     def fingerprint(self, agent_id: str, environment: str) -> str:
         """Return this action's fingerprint bound to an agent and environment.
@@ -220,12 +239,29 @@ class ActionDefinition:
         if unknown:
             raise TypeError(f"action {self.type!r} got unknown args: {sorted(unknown)}")
 
+    def _bind_args(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Apply the function's defaults so the action (and its fingerprint) reflect
+        every value that will actually execute, not only the explicitly-passed ones."""
+        sig = inspect.signature(self._fn)
+        args: dict[str, Any] = {}
+        for name, param in sig.parameters.items():
+            if name in ("self", "cls") or param.kind in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD,
+            ):
+                continue
+            if name in kwargs:
+                args[name] = kwargs[name]
+            elif param.default is not inspect.Parameter.empty:
+                args[name] = param.default
+        return args
+
     def action(self, **kwargs: Any) -> Action:
         """Build a bound :class:`Action` from keyword args, validated by schema."""
         self._validate(kwargs)
         return Action(
             type=self.type,
-            args=dict(kwargs),
+            args=self._bind_args(kwargs),
             version=self.version,
             tool=self.tool,
             reversible=self.reversible,
@@ -236,6 +272,8 @@ class ActionDefinition:
             editable=list(self.editable),
             display=dict(self.display),
             redact=list(self.redact),
+            expires_in=self.expires_in,
+            on_expiry=self.on_expiry,
         )
 
     def definition(self) -> dict[str, Any]:
@@ -252,6 +290,8 @@ class ActionDefinition:
             "owner": self.owner,
             "tool": self.tool,
             "schema": self.schema,
+            "args_schema": self.schema,  # the key the server persists into the catalog
+            "display": display_to_wire(self.display),
         }
 
 

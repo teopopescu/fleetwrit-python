@@ -15,6 +15,13 @@ class PolicyDenied(FleetwritError):
     """A policy engine returned a ``deny`` verdict for the proposed action."""
 
 
+class FleetwritExpired(FleetwritError):
+    """No decision was made before the request's deadline and ``on_expiry='raise'``.
+
+    Raised so a caller never mistakes an expired request for a human's answer.
+    """
+
+
 class FleetwritAlreadyConsumed(FleetwritError):
     """The decision was already acknowledged; refusing to deliver it twice.
 

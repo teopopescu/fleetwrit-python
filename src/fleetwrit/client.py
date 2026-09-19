@@ -11,8 +11,14 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 from .actions import Action, ActionDefinition
 from .decision import Decision, Reviewer
+from .exceptions import FleetwritExpired
 from .fingerprint import fingerprint, idempotency_key, redact_args
 from .transport import HttpTransport, Transport
+
+
+def _no_human_answer(raw: dict[str, Any]) -> bool:
+    """True when the request ended without a human decision (expired or timed out)."""
+    return raw.get("outcome") in ("expired", "pending", None)
 
 
 def _render_summary(action: Action, args: dict[str, Any]) -> str | None:
@@ -100,20 +106,25 @@ class Client:
         context: dict[str, Any] | None = None,
         queue: str | None = None,
         expires_in: str | int | None = None,
-        on_expiry: str = "reject",
+        on_expiry: str | None = None,
         idempotency_key_: str | None = None,
         run_id: str | None = None,
         parent_request_id: str | None = None,
         trace_id: str | None = None,
     ) -> Decision:
         """Ask a human to approve, approve-with-edits, or reject one action."""
+        # Explicit call args win; otherwise fall back to the action's declared
+        # defaults, then the client default. A time-sensitive action stays
+        # time-sensitive even if the caller doesn't repeat expires_in.
+        eff_expires = expires_in if expires_in is not None else action.expires_in
+        eff_on_expiry = on_expiry or action.on_expiry or "reject"
         payload = self._build_request(
             "approve",
             action,
             context=context,
             queue=queue,
-            expires_in=expires_in,
-            on_expiry=on_expiry,
+            expires_in=eff_expires,
+            on_expiry=eff_on_expiry,
             idempotency_key_=idempotency_key_,
             run_id=run_id,
             parent_request_id=parent_request_id,
@@ -121,8 +132,10 @@ class Client:
         )
         created = self._transport.create_request(payload)
         request_id = created["id"]
-        raw = self._await_decision(request_id, expires_in)
+        raw = self._await_decision(request_id, eff_expires)
         self._transport.ack(request_id)
+        if eff_on_expiry == "raise" and _no_human_answer(raw):
+            raise FleetwritExpired(f"request {request_id} expired before a decision")
         return self._decision_from(raw, fallback_action=action, request_id=request_id)
 
     def input(
@@ -145,6 +158,8 @@ class Client:
         request_id = created["id"]
         raw = self._await_decision(request_id, expires_in)
         self._transport.ack(request_id)
+        if on_expiry == "raise" and _no_human_answer(raw):
+            raise FleetwritExpired(f"input request {request_id} expired unanswered")
         return raw.get("value")
 
     def choose(
@@ -169,6 +184,8 @@ class Client:
         request_id = created["id"]
         raw = self._await_decision(request_id, expires_in)
         self._transport.ack(request_id)
+        if on_expiry == "raise" and _no_human_answer(raw):
+            raise FleetwritExpired(f"choose request {request_id} expired unanswered")
         return raw.get("option")
 
     @contextmanager
@@ -320,4 +337,6 @@ class Client:
             editable=list(fallback.editable),
             display=dict(fallback.display),
             redact=list(fallback.redact),
+            expires_in=fallback.expires_in,
+            on_expiry=fallback.on_expiry,
         )

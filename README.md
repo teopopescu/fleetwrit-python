@@ -37,6 +37,19 @@ pip install "fleetwrit[opa]"         # or [cedar]
 pip install "fleetwrit[dev]"         # pytest, hypothesis, jsonschema
 ```
 
+## Run the local stack
+
+The `dev-server` extra pulls in the local server with the dashboard bundled in,
+so one install and one command bring up the whole thing — no repo checkout, no
+Docker, no Node:
+
+```bash
+pip install "fleetwrit[dev-server] @ git+https://github.com/teopopescu/fleetwrit-python.git"
+fleetwrit dev            # server API + dashboard on http://localhost:4100
+```
+
+Flags: `--port`, `--no-dashboard`, `--no-seed`.
+
 ## The three calls and a guard
 
 ```python

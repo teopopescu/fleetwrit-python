@@ -19,10 +19,9 @@ def _cmd_dev(args: argparse.Namespace) -> int:
     try:
         from fleetwrit_server.cli import run_dev
     except ImportError:
-        print("fleetwrit dev needs the server package (github.com/teopopescu/fleetwrit).")
-        print("From a clone of that repo:")
-        print("  pip install -e ./server -e ./fleetwrit-python")
-        print("  fleetwrit dev          # or: fleetwrit-server dev")
+        print("fleetwrit dev needs the local server. Install it (no clone, no Node):")
+        print('  pip install "fleetwrit[dev-server] @ git+https://github.com/teopopescu/fleetwrit-python.git"')
+        print("then re-run:  fleetwrit dev")
         return 1
     return int(run_dev(
         port=args.port,
